@@ -46,13 +46,13 @@ locally, into just one `LocalExecutor` with multiple modes.
 
 import multiprocessing
 import subprocess
-import time
 
 from builtins import range
 
 from airflow.executors.base_executor import BaseExecutor
 from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.utils.state import State
+from airflow.utils.synchronized_queue import SynchronizedQueue
 
 
 class LocalWorker(multiprocessing.Process, LoggingMixin):
@@ -63,9 +63,9 @@ class LocalWorker(multiprocessing.Process, LoggingMixin):
     def __init__(self, result_queue):
         """
         :param result_queue: the queue to store result states tuples (key, State)
-        :type result_queue: multiprocessing.Queue
+        :type result_queue: SynchronizedQueue
         """
-        super(LocalWorker, self).__init__()
+        super().__init__()
         self.daemon = True
         self.result_queue = result_queue
         self.key = None
@@ -94,7 +94,6 @@ class LocalWorker(multiprocessing.Process, LoggingMixin):
 
     def run(self):
         self.execute_work(self.key, self.command)
-        time.sleep(1)
 
 
 class QueuedLocalWorker(LocalWorker):
@@ -104,7 +103,7 @@ class QueuedLocalWorker(LocalWorker):
     execution once the poison token is found."""
 
     def __init__(self, task_queue, result_queue):
-        super(QueuedLocalWorker, self).__init__(result_queue=result_queue)
+        super().__init__(result_queue=result_queue)
         self.task_queue = task_queue
 
     def run(self):
@@ -116,7 +115,6 @@ class QueuedLocalWorker(LocalWorker):
                 break
             self.execute_work(key, command)
             self.task_queue.task_done()
-            time.sleep(1)
 
 
 class LocalExecutor(BaseExecutor):
@@ -164,7 +162,6 @@ class LocalExecutor(BaseExecutor):
         def end(self):
             while self.executor.workers_active > 0:
                 self.executor.sync()
-                time.sleep(0.5)
 
     class _LimitedParallelism(object):
         """Implements LocalExecutor with limited parallelism using a task queue to
@@ -210,7 +207,7 @@ class LocalExecutor(BaseExecutor):
             self.executor.sync()
 
     def start(self):
-        self.result_queue = multiprocessing.Queue()
+        self.result_queue = SynchronizedQueue()
         self.queue = None
         self.workers = []
         self.workers_used = 0

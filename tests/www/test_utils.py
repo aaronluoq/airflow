@@ -17,20 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import unittest
 from datetime import datetime
+from urllib.parse import parse_qs
 
-from bs4 import BeautifulSoup
 import mock
-import six
-from six.moves.urllib.parse import parse_qs
+from bs4 import BeautifulSoup
 
 from airflow.www import utils
-
-if six.PY2:
-    # Need `assertRegex` back-ported from unittest2
-    import unittest2 as unittest
-else:
-    import unittest
 
 
 class UtilsTest(unittest.TestCase):

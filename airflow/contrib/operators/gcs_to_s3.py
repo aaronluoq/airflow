@@ -67,7 +67,7 @@ class GoogleCloudStorageToS3Operator(GoogleCloudStorageListOperator):
                  bucket,
                  prefix=None,
                  delimiter=None,
-                 google_cloud_storage_conn_id='google_cloud_storage_default',
+                 google_cloud_storage_conn_id='google_cloud_default',
                  delegate_to=None,
                  dest_aws_conn_id=None,
                  dest_s3_key=None,
@@ -76,7 +76,7 @@ class GoogleCloudStorageToS3Operator(GoogleCloudStorageListOperator):
                  *args,
                  **kwargs):
 
-        super(GoogleCloudStorageToS3Operator, self).__init__(
+        super().__init__(
             bucket=bucket,
             prefix=prefix,
             delimiter=delimiter,
@@ -92,7 +92,7 @@ class GoogleCloudStorageToS3Operator(GoogleCloudStorageListOperator):
 
     def execute(self, context):
         # use the super to list all files in an Google Cloud Storage bucket
-        files = super(GoogleCloudStorageToS3Operator, self).execute(context)
+        files = super().execute(context)
         s3_hook = S3Hook(aws_conn_id=self.dest_aws_conn_id, verify=self.dest_verify)
 
         if not self.replace:

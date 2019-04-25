@@ -16,11 +16,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import errno
 
@@ -57,7 +52,7 @@ def validate_key(k, max_length=250):
     elif not KEY_REGEX.match(k):
         raise AirflowException(
             "The key ({k}) has to be made of alphanumeric characters, dashes, "
-            "dots and underscores exclusively".format(**locals()))
+            "dots and underscores exclusively".format(k=k))
     else:
         return True
 
@@ -153,6 +148,22 @@ def as_flattened_list(iterable):
     ['blue', 'red', 'green', 'yellow', 'pink']
     """
     return [e for i in iterable for e in i]
+
+
+def chain(*tasks):
+    """
+    Given a number of tasks, builds a dependency chain.
+
+    chain(task_1, task_2, task_3, task_4)
+
+    is equivalent to
+
+    task_1.set_downstream(task_2)
+    task_2.set_downstream(task_3)
+    task_3.set_downstream(task_4)
+    """
+    for up_task, down_task in zip(tasks[:-1], tasks[1:]):
+        up_task.set_downstream(down_task)
 
 
 def cross_downstream(from_tasks, to_tasks):

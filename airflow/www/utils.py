@@ -38,7 +38,7 @@ from flask import request, Response, Markup, url_for
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 import flask_appbuilder.models.sqla.filters as fab_sqlafilters
 import sqlalchemy as sqla
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 
 from airflow import configuration
 from airflow.models import BaseOperator
@@ -251,14 +251,14 @@ def task_instance_link(attr):
             aria-hidden="true"></span>
         </a>
         </span>
-        """).format(**locals())
+        """).format(url=url, task_id=task_id, url_root=url_root)
 
 
 def state_token(state):
     color = State.color(state)
     return Markup(
         '<span class="label" style="background-color:{color};">'
-        '{state}</span>').format(**locals())
+        '{state}</span>').format(color=color, state=state)
 
 
 def state_f(attr):
@@ -304,7 +304,7 @@ def dag_run_link(attr):
         run_id=run_id,
         execution_date=execution_date)
     return Markup(
-        '<a href="{url}">{run_id}</a>').format(**locals())
+        '<a href="{url}">{run_id}</a>').format(url=url, run_id=run_id)
 
 
 def pygment_html_render(s, lexer=lexers.TextLexer):
@@ -384,7 +384,7 @@ class UtcAwareFilterMixin(object):
     def apply(self, query, value):
         value = timezone.parse(value, timezone=timezone.utc)
 
-        return super(UtcAwareFilterMixin, self).apply(query, value)
+        return super().apply(query, value)
 
 
 class UtcAwareFilterEqual(UtcAwareFilterMixin, fab_sqlafilters.FilterEqual):
@@ -422,7 +422,7 @@ class CustomSQLAInterface(SQLAInterface):
 
     """
     def __init__(self, obj):
-        super(CustomSQLAInterface, self).__init__(obj)
+        super().__init__(obj)
 
         def clean_column_names():
             if self.list_properties:

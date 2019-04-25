@@ -17,8 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
-
 import json
 import unittest
 
@@ -46,9 +44,7 @@ from airflow.executors import SequentialExecutor
 from airflow.models import Variable, TaskInstance
 
 from airflow import jobs, models, DAG, utils, macros, settings, exceptions
-from airflow.models import BaseOperator
-from airflow.models.connection import Connection
-from airflow.models.taskfail import TaskFail
+from airflow.models import BaseOperator, Connection, TaskFail
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.check_operator import CheckOperator, ValueCheckOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -83,7 +79,7 @@ try:
     import cPickle as pickle
 except ImportError:
     # Python 3
-    import pickle
+    import pickle  # type: ignore
 
 
 class OperatorSubclass(BaseOperator):
@@ -93,7 +89,7 @@ class OperatorSubclass(BaseOperator):
     template_fields = ['some_templated_field']
 
     def __init__(self, some_templated_field, *args, **kwargs):
-        super(OperatorSubclass, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.some_templated_field = some_templated_field
 
     def execute(*args, **kwargs):
@@ -745,6 +741,24 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(value, val)
         self.assertEqual(value, Variable.get(key, deserialize_json=True))
 
+    def test_variable_delete(self):
+        key = "tested_var_delete"
+        value = "to be deleted"
+
+        # No-op if the variable doesn't exist
+        Variable.delete(key)
+        with self.assertRaises(KeyError):
+            Variable.get(key)
+
+        # Set the variable
+        Variable.set(key, value)
+        self.assertEqual(value, Variable.get(key))
+
+        # Delete the variable
+        Variable.delete(key)
+        with self.assertRaises(KeyError):
+            Variable.get(key)
+
     def test_parameterized_config_gen(self):
 
         cfg = configuration.parameterized_config(configuration.DEFAULT_CONFIG)
@@ -949,15 +963,12 @@ class CoreTest(unittest.TestCase):
         self.assertGreaterEqual(sum([f.duration for f in f_fails]), 3)
 
     def test_run_command(self):
-        if six.PY3:
-            write = r'sys.stdout.buffer.write("\u1000foo".encode("utf8"))'
-        else:
-            write = r'sys.stdout.write(u"\u1000foo".encode("utf8"))'
+        write = r'sys.stdout.buffer.write("\u1000foo".encode("utf8"))'
 
         cmd = 'import sys; {0}; sys.stdout.flush()'.format(write)
 
         self.assertEqual(run_command("python -c '{0}'".format(cmd)),
-                         u'\u1000foo' if six.PY3 else 'foo')
+                         u'\u1000foo')
 
         self.assertEqual(run_command('echo "foo bar"'), u'foo bar\n')
         self.assertRaises(AirflowConfigException, run_command, 'bash -c "exit 1"')
@@ -1062,7 +1073,7 @@ class CliTests(unittest.TestCase):
         cls._cleanup()
 
     def setUp(self):
-        super(CliTests, self).setUp()
+        super().setUp()
         configuration.load_test_config()
         from airflow.www import app as application
         self.app, self.appbuilder = application.create_app(session=Session, testing=True)
@@ -1083,7 +1094,7 @@ class CliTests(unittest.TestCase):
             if self.appbuilder.sm.find_role(role_name):
                 self.appbuilder.sm.delete_role(role_name)
 
-        super(CliTests, self).tearDown()
+        super().tearDown()
 
     @staticmethod
     def _cleanup(session=None):
@@ -1323,7 +1334,7 @@ class CliTests(unittest.TestCase):
         ])
         cli.sync_perm(args)
 
-        self.appbuilder.sm.sync_roles.assert_called_once()
+        assert self.appbuilder.sm.sync_roles.call_count == 1
 
         self.assertEqual(2,
                          len(self.appbuilder.sm.sync_perm_for_dag.mock_calls))
@@ -1424,7 +1435,7 @@ class CliTests(unittest.TestCase):
         # Assert that some of the connections are present in the output as
         # expected:
         self.assertIn(['aws_default', 'aws'], conns)
-        self.assertIn(['beeline_default', 'beeline'], conns)
+        self.assertIn(['hive_cli_default', 'hive_cli'], conns)
         self.assertIn(['emr_default', 'emr'], conns)
         self.assertIn(['mssql_default', 'mssql'], conns)
         self.assertIn(['mysql_default', 'mysql'], conns)
@@ -2206,10 +2217,7 @@ class WebHDFSHookTest(unittest.TestCase):
 
 
 HDFSHook = None
-if six.PY2:
-    from airflow.hooks.hdfs_hook import HDFSHook
-    import snakebite
-
+snakebite = None
 
 @unittest.skipIf(HDFSHook is None,
                  "Skipping test because HDFSHook is not installed")
